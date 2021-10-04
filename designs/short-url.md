@@ -4,6 +4,18 @@
 ![overview](../img/short-url-overview.png)
 ![summary](../img/short-url-detail.png)
 
+- **Database** 
+  - NoSql ( easier to scale )
+  - SQL ( with sharding would works )
+- **Slug Generation**
+  - Hashing - Collision Resolution
+  - KGS
+- **Partitioning**
+  - Based on Slug first Char (Unbalanced)
+  - Consistant Hashing
+- **Cache Eviction** : LRU
+
+
 ## Requirements
 - Functional Requirements
   - Given a URL, generate a shorter and unique alias (short link).
