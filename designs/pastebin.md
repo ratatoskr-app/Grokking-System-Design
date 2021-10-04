@@ -4,6 +4,14 @@
 ![overview](../img/pastebin-overview.png)
 ![summary](../img/pastebin-detail.png)
 
+- Database
+  - Metadata Database : RDBMS
+  - Object Storage : S3
+  - Store Object Storage key in database
+- Slug Generation
+  - Random string with collision detection
+  - KGS ( Two tables )
+
 ## 2. Requirements and Goals of the System
 
 Our Pastebin service should meet the following requirements:
