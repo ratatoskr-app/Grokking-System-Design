@@ -4,6 +4,22 @@
 ![overview](../img/instagram-overview.png)
 ![summary](../img/instagram-detail.png)
 
+- Database
+  - Wide-Column Database (HBase / Cassandra)
+  - Tables
+    - Users
+    - Photos
+    - Follows
+  - Sharding
+    -  UserID (All user Photos in same servers)
+    -  PhotoID ( Better )
+- Feed Generation
+  - Using Pre-computing for feed generation
+- Feed Send
+  - Pulling (Celeb issue, user with high followed)
+  - Pushing (Long-Polling)
+  - Hybrid    
+
 ## Requirements
 
 - **Functional Requirements**
