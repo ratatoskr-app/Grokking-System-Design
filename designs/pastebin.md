@@ -40,100 +40,81 @@ Since our service supports custom URLs, users can pick any URL that they like, b
 
 ## 4. Capacity Estimation and Constraints
 
-Our services will be read-heavy; there will be more read requests compared to new Pastes creation.
+- Assumption 
+  - Read Heady : there will be more read requests compared to new Pastes creation.
+  - Assume **5:1** ratio between read and write.
 
-**We can assume a 5:1 ratio between read and write.**
+- Traffic estimates
+  - **1M** new pastes per day or **30M** new per month
+  - New Pasters per seconds
+    - `1M / (24 hours * 3600 seconds) ~= 12 pastes/sec`
+  - **5M** Paste reads per day or **150M** read per month
+    - `5M / (24 hours * 3600 seconds) ~= 58 reads/sec`
 
-**Traffic estimates:** 
+- Storage estimates
+  - Users can upload maximum **10MB** of data but let's assume on average **10KB**
+  - Total Objects : `1M * 365 * 10 = 3.6B`
+  - Object Storage O over **10 years** `1M * 10KB => 10 GB/day` for 10 years it will be `36TB`
+  - Unique Keys : if we base64 encode a-Z, A-Z, 0-9,.,- with **6 letters** we have `64^6 ~= 68.7 billion unique strings`
+  - Keys Storage : We need a byte per char, with **6 letters** will be `3.6B * 6 => 22 GB`
+  - Total Storage : `(22GB + 36TB) / 0.7 = 51.4TB` 70% capacity model
 
-Pastebin services are not expected to have traffic similar to Twitter or Facebook, let’s assume here that we get one million new pastes added to our system every day. This leaves us with five million reads per day.
+- Bandwidth estimates
+  - Write Requests: `12 * 10KB => 120 KB/s`
+  - Read Requests: `58 * 10KB => 0.6 MB/s`
 
-**New Pastes per second:**
-
-`1M / (24 hours * 3600 seconds) ~= 12 pastes/sec`
-
-**Paste reads per second:**
-
-`5M / (24 hours * 3600 seconds) ~= 58 reads/sec`
-
-
-**Storage estimates:** 
-
-Users can upload maximum 10MB of data; commonly Pastebin like services are
-used to share source code, configs or logs. Such texts are not huge, so let’s assume that each paste on average contains 10KB.
-At this rate, we will be storing 10GB of data per day.
-
-`1M * 10KB => 10 GB/day` for 10 years it will be `36TB`
-
-With 1M pastes every day we will have 3.6 billion Pastes in 10 years. 
-
-We need to generate and store keys to uniquely identify these pastes. If we use base64 encoding ([A-Z, a-z, 0-9, ., -]) we would need six letters strings:
-
-`64^6 ~= 68.7 billion unique strings`
-
-If it takes one byte to store one character, total size required to store 3.6B keys would be:
-
-`3.6B * 6 => 22 GB`
-
-22GB is negligible compared to 36TB. To keep some margin, we will assume a 70% capacity model (meaning we don’t want to use more than 70% of our total storage capacity at any point), which raises our storage needs to 51.4TB.
-
-**Bandwidth estimates:** 
-
-For write requests, we expect 12 new pastes per second, resulting in 120KB of ingress per second.
-
-`12 * 10KB => 120 KB/s`
-
-As for the read request, we expect 58 requests per second. Therefore, total data egress (sent to users) will be 0.6 MB/s.
-
-`58 * 10KB => 0.6 MB/s`
-
-**Memory estimates:** 
-
-We can cache some of the hot pastes that are frequently accessed. Following the 80-20 rule, meaning 20% of hot pastes generate 80% of traffic, we would like to cache these 20% pastes Since we have 5M read requests per day, to cache 20% of these requests, we would need:
-
-`0.2 * 5M * 10KB ~= 10 GB`
+- Memory estimates:
+  - Followw the 80-20 rule assuming 20% of pastes generate 80% of traffic cache 20% of hot pastes `0.2 * 5M * 10KB ~= 10 GB`
 
 ## 5. System APIs
 We can have SOAP or REST APIs to expose the functionality of our service. Following could be the definitions of the APIs to **create**/**retrieve**/**delete** Pastes:
 
-`addPaste(api_dev_key, paste_data, custom_url=None user_name=None, paste_name=None,expire_date=None)`
+### `addPaste`
 
-**Parameters:**
+- Parameters
 
-api_dev_key (string): The API developer key of a registered account. This will be used to, among other things, throttle users based on their allocated quota.
-paste_data (string): Textual data of the paste.
-custom_url (string): Optional custom URL.
-user_name (string): Optional user name to be used to generate URL. paste_name (string): Optional name of the paste
-expire_date (string): Optional expiration date for the paste.
+| Name 	| Type 	| Note 	|
+|---	|---	|---	|
+| api_dev_key 	| (string) 	| The API developer key of a registered account. This will be used to, among other things, throttle users based on their allocated quota. 	|
+| paste_data 	| (string) 	| Textual data of the paste. 	|
+| custom_url 	| (string) 	| Optional custom URL. 	|
+| user_name 	| (string) 	| Optional user name to be used to generate URL. paste_name (string): Optional name of the paste 	|
+| expire_date 	| (string) 	| Optional expiration date for the paste. 	|
 
-**Returns: (string)**
-A successful insertion returns the URL through which the paste can be accessed, otherwise, it will return an error code. Similarly, we can have retrieve and delete Paste APIs:
+- Returns: 
+  - (string)
+  - A successful insertion returns the URL through which the paste can be accessed, otherwise, it will return an error code. Similarly, we can have retrieve and delete Paste APIs:
 
-`getPaste(api_dev_key, api_paste_key)`
+### `getPaste(api_dev_key, api_paste_key)`
 
 Where “api_paste_key” is a string representing the Paste Key of the paste to be retrieved. This API will return the textual data of the paste.
 
-`deletePaste(api_dev_key, api_paste_key)`
+### `deletePaste(api_dev_key, api_paste_key)`
 
 A successful deletion returns ‘true’, otherwise returns ‘false’.
 
 ## 6. Database Design
-A few observations about the nature of the data we are storing:
 
-1. We need to store billions of records.
-2. Each metadata object we are storing would be small (less than 100 bytes).
-3. Each paste object we are storing can be of medium size (it can be a few MB).
-4. There are no relationships between records, except if we want to store which user created what Paste.
-5. Our service is read-heavy.
+- Observation
+  - We need to store billions of records.
+  - Each metadata object we are storing would be small (less than 100 bytes).
+  - Each paste object we are storing can be of medium size (it can be a few MB).
+  - There are no relationships between records, except if we want to store which user created what Paste.
+  - Our service is read-heavy.
+- Schema 
 
-| Paste           |              |           
+#### Paste
+
+| Column          |   Type       |           
 |-----------------|--------------|
 | URLHash         | varchar(16)  |
 | ContentKey      | varchar(255) |
 | ExpireationDate | datetime     |
 | CreationDate    | datetime     |
 
-| User         |             |
+#### User
+
+| Column       |    Type     |
 |--------------|-------------|
 | UserId       | int         |
 | Name         | varchar(20) |
