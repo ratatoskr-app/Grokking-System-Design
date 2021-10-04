@@ -4,6 +4,16 @@
 ![overview](../img/facebook-messenger-overview.png)
 ![summary](../img/facebook-messenger-detail.png)
 
+- Database
+  - Use NoSQL, Wide-Columns (Apache HBase), Buffer writes
+  - SQL could not be scaled properly
+  - Data Partitioning
+    - UserID
+      - Chat history will be on a single shard -> quick fetch
+      - We can start with smaller partitions
+    - MessageID (Not Good)
+      - Messages will be on different servers 
+
 ## 2.Requirements and Goals
 
 - **Functional Requirements**
