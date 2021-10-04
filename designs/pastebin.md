@@ -136,24 +136,29 @@ At a high level, we need an application layer that will serve all the read and w
 
 Our application layer will process all incoming and outgoing requests. The application servers will be talking to the backend data store components to serve the requests.
 
-**How to handle a write request?** 
+#### Write Request
+- Random Key Generation
+  - Generating a six-letter random string if not a custom key is provided
+    - Problems
+      - Duplicate key, keeps generating till we have a unique key
+      - Return an error if custom key is already in database
+  - Key Generation Service
+    - Generate random 6 letter strings and store them in database (keys DB)
+    - When a keys is needed, take one from the keys DB
+    - Two tables to store keys, one for used and one for not used
+    - Problems
+      - Single point of failure, Solution : standby replica of KGS
+      - App Server can cache some keys from keys-DB, in case it dies we are losing those keys
 
-Upon receiving a write request, our application server will generate a six-letter random string, which would serve as the key of the paste (if the user has not provided a custom key). The application server will then store the contents of the paste and the generated key in the database. After the successful insertion, the server can return the key to the user. One possible problem here could be that the insertion fails because of a duplicate key. Since we are generating a random key, there is a possibility that the newly generated key could match an existing one. In that case, we should regenerate a new key and try again. We should keep retrying until we don’t see failure due to the duplicate key. We should return an error to the user if the custom key they have provided is already present in our database.
-
-**Key Generation Service**
-
-Another solution of the above problem could be to run a standalone Key Generation Service (KGS) that generates random six letters strings beforehand and stores them in a database (let’s call it key-DB). Whenever we want to store a new paste, we will just take one of the already generated keys and use it. This approach will make things quite simple and fast since we will not be worrying about duplications or collisions. KGS will make sure all the keys inserted in key-DB are unique. KGS can use two tables to store keys, one for keys that are not used yet and one for all the used keys. As soon as KGS gives some keys to an application server, it can move these to the used keys table. KGS can always keep some keys in memory so that whenever a server needs them, it can quickly provide them. As soon as KGS loads some keys in memory, it can move them to the used keys table, this way we can make sure each server gets unique keys. If KGS dies before using all the keys loaded in memory, we will be wasting those keys. We can ignore these keys given that we have a huge number of them.
-
-**Isn’t KGS a single point of failure?** Yes, it is. To solve this, we can have a standby replica of KGS and whenever the primary server dies it can take over to generate and provide keys.
-
-**Can each app server cache some keys from key-DB?** Yes, this can surely speed things up. Although in this case, if the application server dies before consuming all the keys, we will end up losing those keys. This could be acceptable since we have 68B unique six letters keys, which are a lot more than we require.
-How does it handle a paste read request? Upon receiving a read paste request, the application service layer contacts the datastore. The datastore searches for the key, and if it is found, returns the paste’s contents. Otherwise, an error code is returned.
+#### Read Request
+- Upon receiving a read paste request, the application service layer contacts the datastore
+- The datastore searches for the key, and if it is found, returns the paste’s contents. Otherwise, an error code is returned.
 
 ### b. Datastore layer
 We can divide our datastore layer into two:
 
 1. **Metadata database:** We can use a relational database like MySQL or a Distributed Key-Value store like Dynamo or Cassandra.
-2. **Object storage:** We can store our contents in an Object Storage like Amazon’s S3. Whenever we feel like hitting our full capacity on content storage, we can easily increase it by adding more servers.
+2. **Object storage:**  Object Storage like Amazon’s S3. Whenever we feel like hitting our full capacity on content storage, we can easily increase it by adding more servers.
 
 ![Screen Shot 2021-10-04 at 11 22 58 AM](https://user-images.githubusercontent.com/1195878/135813736-c10ea2a8-167d-4da2-9340-886b40ebc001.png)
 
