@@ -6,38 +6,32 @@
 
 ## 2.Requirements and Goals
 
-### Functional Requirements
-1. Messenger should support one-on-one conversations between users.
-2. Messenger should keep track of the online/offline statuses of its users.
-3. Messenger should support persistent storage of chat history
+- **Functional Requirements**
+  - Messenger should support one-on-one conversations between users.
+  - Messenger should keep track of the online/offline statuses of its users.
+  - Messenger should support persistent storage of chat history
 
-### Non-functional Requirements:
-1. Users should have real-time chat experience with minimum latency.
-2. Our system should be highly consistent; users should be able to see the same chat history on all their devices.
-3. Messenger’s high availability is desirable; we can tolerate lower availability in the interest of consistency. 
+- **Non-functional Requirements**
+  - Users should have real-time chat experience with minimum latency.
+  - Our system should be highly consistent; users should be able to see the same chat history on all their devices.
+  - Messenger’s high availability is desirable; we can tolerate lower availability in the interest of consistency. 
 
-### Extended Requirements:
-- **Group Chats:** Messenger should support multiple people talking to each other in a group.
-- **Push notifications:** Messenger should be able to notify users of new messages when they are offline. 
+- **Extended Requirements**
+  - **Group Chats:** Messenger should support multiple people talking to each other in a group.
+  - **Push notifications:** Messenger should be able to notify users of new messages when they are offline. 
 
 ## 3.Capacity Estimation and Constraints
-Let’s assume that we have **500 million daily active users** and on average each user sends 40 messages daily; this gives us **20 billion** messages per day.
-
-**Storage Estimation:** Let’s assume that on average a message is 100 bytes, so to store all the messages for one day we would need 2TB of storage.
-`20 billion messages * 100 bytes => 2 TB/day`
-
-To store five years of chat history, we would need 3.6 petabytes of storage.
-
-`2 TB * 365 days * 5 years ~= 3.6 PB`
-
-Other than the chat messages, we would also need to store users’ information, messages’ metadata (ID, Timestamp, etc.).
-Not to mention, the above calculation doesn’t take data compression and replication in consideration.
-
-**Bandwidth Estimation:** If our service is getting 2TB of data every day, this will give us 25MB of incoming data for each second.
-
-`2 TB / 86400 sec ~= 25 MB/s`
-
-Since each incoming message needs to go out to another user, we will need the same amount of bandwidth 25MB/s for both upload and download.
+- Assumptions
+  - **500 million** daily active users
+  - 40 Message/Day each user
+  - `500M * 40 => 20B/Day`
+- Storage Estimation
+  - Average a message is 100 bytes
+  - 2TB of storage per day `20 billion messages * 100 bytes => 2 TB/day`
+  - 3.6 PB for 5 years `2 TB * 365 days * 5 years ~= 3.6 PB`
+  - Space for Users Infromation and message metadata
+- Bandwidth Estimation:
+  - 25MB/S `2 TB / 86400 sec ~= 25 MB/s` both upload and download
 
 **High level estimates:**
 
@@ -84,8 +78,8 @@ Our system at the high level needs to handle the following use cases :
 
 - **How should the server process a ‘deliver message’ request?**
 - The server needs to do the following things upon receiving a new message: 
-  - 1) Store the message in the database 2) 
-  - Send the message to the receiver and 
+  - 1) Store the message in the database 
+  - 2) Send the message to the receiver and 
   - 3) Send an acknowledgment to the sender.
 
 The chat server will first find the server that holds the connection for the receiver and pass the message
@@ -102,7 +96,7 @@ background). Storing the message is discussed in the next section.
 
 **Which storage system to use?**
 
-- We cannot use RDBMS like MySQL or NoSQL like MongoDB because we cannot afford to read/write a row from the database every time a user receives/sends a message.
+- **We cannot use RDBMS like MySQL or NoSQL like MongoDB** because we cannot afford to read/write a row from the database every time a user receives/sends a message.
 - This will not only make the basic operations of our service run with high latency, but also create a huge load on databases.
 - We should use wide-colun database solution like **HBase** or **Casandra**
 
@@ -135,15 +129,15 @@ Since we will be storing a lot of data (3.6PB for five years), we need to distri
 **What will be our partitioning scheme?**
 
 **Partitioning based on UserID:** 
-Let’s assume we partition based on the hash of the UserID so that we can keep all messages of a user on the same database. 
-If one DB shard is 4TB, we will have “3.6PB/4TB ~= 900” shards for five years. 
-For simplicity, let’s assume we keep 1K shards. So we will find the shard number by “hash(UserID) % 1000” and then store/retrieve the data from there. This
-partitioning scheme will also be very quick to fetch chat history for any user.
-
-In the beginning, we can start with fewer database servers with multiple shards residing on one physical server. Since we can have multiple database instances on a server, we can easily store multiple partitions on a single server. Our hash function needs to understand this logical partitioning scheme so that it can map multiple logical partitions on one physical server.
+- Use UserID as sharding key
+- Assume 4TB as size of DB shard
+- 3.6PB/4TB -> 1000 shards
+- `UserID % 1000`
+- Chat history will be on a single shard -> quick fetch
+- We can start with smaller partitions
 
 **Partitioning based on MessageID:** (Not a good option) 
-If we store different messages of a user on separate database shards, fetching a range of messages of a chat would be very slow, so we should not adopt this scheme.
+- If we store different messages of a user on separate database shards, fetching a range of messages of a chat would be very slow, so we should not adopt this scheme.
 
 ## 7. Cache
 We can cache a few recent messages (say last 15) in a few recent conversations that are visible in a user’s viewport (say last 5). Since we decided to store all of the user’s messages on one shard, cache for a user should entirely reside on one machine too.
