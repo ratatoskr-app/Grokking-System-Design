@@ -6,52 +6,42 @@
 
 ## Requirements and Goals
 
-### Functional Requirements
-1. Users should be able to post new tweets.
-2. A user should be able to follow other users.
-3. Users should be able to mark tweets as favorites.
-4. The service should be able to create and display a user’s timeline consisting of top tweets from all the people the user follows.
-5. Tweets can contain photos and videos.
-
-### Non-functional Requirements
-1. Our service needs to be highly available.
-2. Acceptable latency of the system is 200ms for timeline generation.
-3. Consistency can take a hit (in the interest of availability); if a user doesn’t see a tweet for a while, it should be fine.
-
-### Extended Requirements
-1. Searching for tweets.
-2. Replying to a tweet.
-3. Trending topics – current hot topics/searches.
-4. Tagging other users.
-5. Tweet Notification.
-6. Who to follow? Suggestions?
-7. Moments. 
+- **Functional Requirements**
+  - Users should be able to post new tweets.
+  - A user should be able to follow other users.
+  - Users should be able to mark tweets as favorites.
+  - The service should be able to create and display a user’s timeline consisting of top tweets from all the people the user follows.
+  - Tweets can contain photos and videos.
+- **Non-functional Requirements**
+  - Our service needs to be highly available.
+  - Acceptable latency of the system is 200ms for timeline generation.
+  - Consistency can take a hit (in the interest of availability); if a user doesn’t see a tweet for a while, it should be fine.
+- **Extended Requirements**
+  - Searching for tweets.
+  - Replying to a tweet.
+  - Trending topics – current hot topics/searches.
+  - Tagging other users.
+  - Tweet Notification.
+  - Who to follow? Suggestions?
+  - Moments. 
 
 ### 3. Capacity Estimation and Constraints
-Let’s assume we have one billion total users with **200 million** daily active users (DAU). Also assume we have **100 million new tweets** every **day** and on average each **user follows 200 people.**
-
-**How many favorites per day?** 
-If, on average, each user favorites five tweets per day we will have:
-`200M users * 5 favorites => 1B favorites`
-
-**How many total tweet-views will our system generate?** 
-Let’s assume on average a user visits their timeline two times a day and visits five other people’s pages. On each page if a user sees 20 tweets,
-then our system will generate 28B/day total tweet-views:
-
-`200M DAU * ((2 + 5) * 20 tweets) => 28B/day`
-
-**Storage Estimates** Let’s say each tweet has 140 characters and we need two bytes to store a character without compression. Let’s assume we need 30 bytes to store metadata with each tweet (like ID, timestamp, user ID, etc.). Total storage we would need:
-
-`100M * (280 + 30) bytes => 30GB/day`
-
-What would our storage needs be for five years? How much storage we would need for users’ data, follows, favorites? We will leave this for the exercise.
-Not all tweets will have media, let’s assume that on average every fifth tweet has a photo and every tenth has a video. Let’s also assume on average a photo is 200KB and a video is 2MB. This will lead us to have 24TB of new media every day.
-
-`(100M/5 photos * 200KB) + (100M/10 videos * 2MB) ~= 24TB/day`
-
-**Bandwidth Estimates** Since total ingress is 24TB per day, this would translate into 290MB/sec.
-Remember that we have 28B tweet views per day. We must show the photo of every tweet (if it has a photo), but let’s assume that the users watch every 3rd video they see in their timeline. So, total egress will be:
-
+- Assumption
+  - 200M DAU
+  - 100M new tweets per day
+  - User follows 200 people on average 
+  - User favorites 5/Day -> `200M users * 5 favorites => 1B favorites`
+  - User Visit timeline twice a day, 5 people's pages and 20 tweets
+    - `200M DAU * ((2 + 5) * 20 tweets) => 28B/day` tweet-views
+- Storage Estimations
+  - 140 characters per tweet, 2 bytes without compression
+  - 30 bytes to store metadata (like ID, timestamp, user ID, etc)
+  - `100M * (280 + 30) bytes => 30GB/day`
+  - Media Storage ( 1/10 of tweets have Video of 2MB and 1/5 of tweets have Photo of 200KB)
+    - `(100M/5 photos * 200KB) + (100M/10 videos * 2MB) ~= 24TB/day`
+- Bandwidth Estimates
+  - Since total ingress is 24TB per day => 290MB/sec.
+  - 28B tweet views per day ( 1/5 photos, 1/10 videos )
 ```
 (28B * 280 bytes) / 86400s of text => 93MB/s
 (28B/5 * 200KB ) / 86400s of photos => 13GB/S
@@ -60,17 +50,18 @@ Total ~= 35GB/s
 ```
 
 ## System APIs
-- Posting new Tweet
-`tweet(api_dev_key, tweet_data, tweet_location, user_location, media_ids, maximum_results_to_return)`
+- Posting new Tweet `tweet(api_dev_key, tweet_data, tweet_location, user_location, media_ids, maximum_results_to_return)`
+- **Parameters:**
 
-**Parameters:**
-`api_dev_key (string)`: The API developer key of a registered account. This will be used to, among other things, throttle users based on their allocated quota.
-`tweet_data (string):` The text of the tweet, typically up to 140 characters.
-`tweet_location (string)`: Optional location (longitude, latitude) this Tweet refers to. 
-`user_location(string)`: Optional location (longitude, latitude) of the user adding the tweet.
-`media_ids (number[])`: Optional list of media_ids to be associated with the Tweet. (All the media photo, video, etc. need to be uploaded separately).
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+|`api_dev_key`  | (string) | The API developer key of a registered account. This will be used to, among other things, |
+|`tweet_data` | (string) | The text of the tweet, typically up to 140 characters.|
+|`tweet_location` | (string) | Optional location (longitude, latitude) this Tweet refers to. |
+|`user_location` |(string) | Optional location (longitude, latitude) of the user adding the tweet.|
+|`media_ids` | (number[]) | Optional list of media_ids to be associated with the Tweet. (All the media photo, video, etc. need to be uploaded separately).|
 
-**Returns: (string)**
+- **Returns: (string)**
 A successful post will return the URL to access that tweet. Otherwise, an appropriate HTTP error is
 returned.
 
