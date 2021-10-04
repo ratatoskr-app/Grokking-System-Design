@@ -8,23 +8,23 @@
 
 Our Pastebin service should meet the following requirements:
 
-### Functional Requirements:
-1. Users should be able to upload or “paste” their data and get a unique URL to access it.
-2. Users will only be able to upload text.
-3. Data and links will expire after a specific timespan automatically; users should also be able to
-specify expiration time.
-4. Users should optionally be able to pick a custom alias for their paste.
+- **Functional Requirements:**
+  - Users should be able to upload or “paste” their data and get a unique URL to access it.
+  - Users will only be able to upload text.
+  - Data and links will expire after a specific timespan automatically; users should also be able to
+  specify expiration time.
+  - Users should optionally be able to pick a custom alias for their paste.
 
-### Non-Functional Requirements:
-1. The system should be highly reliable, any data uploaded should not be lost.
-2. The system should be highly available. This is required because if our service is down, users
-will not be able to access their Pastes.
-3. Users should be able to access their Pastes in real-time with minimum latency.
-4. Paste links should not be guessable (not predictable).
+- **Non-Functional Requirements:**
+  - The system should be highly reliable, any data uploaded should not be lost.
+  - The system should be highly available. This is required because if our service is down, users
+  will not be able to access their Pastes.
+  - Users should be able to access their Pastes in real-time with minimum latency.
+  - Paste links should not be guessable (not predictable).
 
-### Extended Requirements:
-1. Analytics, e.g., how many times a paste was accessed?
-2. Our service should also be accessible through REST APIs by other services.
+- **Extended Requirements:**
+  - Analytics, e.g., how many times a paste was accessed?
+  - Our service should also be accessible through REST APIs by other services.
 
 ## 3. Some Design Considerations
 Pastebin shares some requirements with URL Shortening service, but there are some additional design considerations we should keep in mind.
